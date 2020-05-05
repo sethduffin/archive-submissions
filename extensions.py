@@ -1,7 +1,13 @@
+# Selenium for Python extentions by Seth Duffin
+# Version: 2.0
+# Updated: 5/5/2020
+
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.action_chains import ActionChains
+from time import sleep
 import sys
+
 
 driver = None
 action = None
@@ -11,8 +17,8 @@ def set_driver(driver_value,action_value=None):
     driver = driver_value
     action = action_value
 
-# Custom Made By seth
-def find(self,method,selector,forceList=False):
+
+def find(self,method,selector,force_list=False,**kwargs):
     content = self
     elements = []
     if method == 'class':
@@ -37,13 +43,25 @@ def find(self,method,selector,forceList=False):
         elements = content.find_elements_by_xpath(".//*[@"+method+"='"+selector+"']")
 
     if len(elements) == 0:
-        if forceList:
+        if force_list:
             return elements
         else:
-            raise Exception("No element matching criteria: %s = '%s'" % (method,selector)) 
-            return None
+            if "wait" in kwargs:
+                time = 0
+                while time <= kwargs["wait"]:
+                    try:
+                        return content.find(method,selector)
+                    except Exception as e:
+                        pass
+                    time += 1
+                else:
+                    raise Exception("No element matching criteria: %s = '%s'" % (method,selector)) 
+                    return None
+            else:
+                raise Exception("No element matching criteria: %s = '%s'" % (method,selector)) 
+                return None
     elif len(elements) == 1:
-        if forceList:
+        if force_list:
             return elements
         else:
             return elements[0]
@@ -82,8 +100,22 @@ def up(self,num=1):
     for i in range(num):
         elem = elem.find_element_by_xpath('..')
     return elem
+
+def wait_until(self,condition,time=5):
+    element = self
+    wait = 0
+    while wait < time:
+        try:
+            if eval(condition,None,locals()):
+                return element
+        except:
+            pass
+        sleep(.1)
+        wait += 0.1
+    else:
+        error('Couldn\'t find element matching condition "%s"' % (num))
     
-exts = ['find','flag','send','up','delete','strong_click']
+exts = ['find','flag','send','up','delete','strong_click',"wait_until"]
 
 for ext in exts:
     exec('WebDriver.'+ext+' = '+ext)
