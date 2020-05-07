@@ -46,9 +46,9 @@ def error(e="Unkown",line=True,pause=True):
 	if line:
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-		print("Error: %s (%s %s)" % (e,fname,exc_tb.tb_lineno))
+		print("Message: %s (%s %s)" % (e,fname,exc_tb.tb_lineno))
 	else:
-		print("Error: %s" % (e))
+		print("Message: %s" % (e))
 	if pause:
 		input(" -- Quit -- ")
 	driver.quit()
@@ -98,6 +98,8 @@ def import_urls():
 
 def login():
 	try:
+		if not local.username:
+			error("No username or password set in local.py", False)
 		driver.get(assignments[0].url)
 		driver.find("name","pseudonym_session[unique_id]").send(local.username)
 		driver.find("name","pseudonym_session[password]").send(local.password)
@@ -108,10 +110,11 @@ def login():
 def save_pdfs():
 	try:
 		# Clear output folder
-		os.system("rm -r %s/*" % (output_path))
+		if local.clear_output_folder:
+			os.system("rm -r %s/*" % (output_path))
 
 		if "temp" in os.listdir(dir_path):
-			os.system("rm -r %s/*" % (temp_path))
+			os.system("rm -r %s" % (temp_path))
 		os.system("mkdir %s" % (temp_path))
 
 		for assignment in assignments:
@@ -126,7 +129,7 @@ def save_pdfs():
 			course_path = output_path+path_ready(assignment.course_name,True)
 			assignment.path = course_path+path_ready(assignment.name,True)
 
-			if not assignment.course_name in courses:
+			if not assignment.course_name in os.listdir(output_path):
 				os.system('mkdir "%s"' % (course_path))
 			os.system('mkdir "%s"' % (assignment.path))
 		
