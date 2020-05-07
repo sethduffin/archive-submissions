@@ -1,1 +1,3 @@
-local.py
+submissions/*
+**/.DS_Store
+__pycache__
