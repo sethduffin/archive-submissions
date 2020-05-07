@@ -111,6 +111,7 @@ def save_pdfs():
 	try:
 		# Clear output folder
 		if local.clear_output_folder:
+			
 			os.system("rm -r %s/*" % (output_path))
 
 		if "temp" in os.listdir(dir_path):
@@ -144,7 +145,7 @@ def save_pdfs():
 					new_path = assignment.path+path_ready(student_name)+'.pdf'
 					driver.find("class","c-grading",wait=5).wait_until("element.clickable()").click()
 				else:
-					new_path = assignment.path+path_ready(student_name)+' (Not Submitted).pdf'
+					new_path = assignment.path+path_ready(student_name)+' (No Submission).pdf'
 
 				driver.implicitly_wait(implicit_wait)
 
