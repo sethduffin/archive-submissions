@@ -1,6 +1,6 @@
 # Selenium for Python extentions by Seth Duffin
-# Version: 2.0
-# Updated: 5/5/2020
+# Version: 2.1
+# Updated: 5/7/2020
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -44,7 +44,18 @@ def find(self,method,selector,force_list=False,**kwargs):
 
     if len(elements) == 0:
         if force_list:
-            return elements
+            if "wait" in kwargs:
+                time = 0
+                while time <= kwargs["wait"]:
+                    try:
+                        return list(content.find(method,selector))
+                    except Exception as e:
+                        pass
+                    time += 1
+                else:
+                    return elements
+            else:
+                return elements
         else:
             if "wait" in kwargs:
                 time = 0
@@ -101,6 +112,14 @@ def up(self,num=1):
         elem = elem.find_element_by_xpath('..')
     return elem
 
+def clickable(self):
+    try:
+        self.click()
+        return True
+    except:
+        return False
+
+
 def wait_until(self,condition,time=5):
     element = self
     wait = 0
@@ -113,9 +132,9 @@ def wait_until(self,condition,time=5):
         sleep(.1)
         wait += 0.1
     else:
-        error('Couldn\'t find element matching condition "%s"' % (num))
+        raise Exception('Couldn\'t find element matching condition "%s"' % (condition))
     
-exts = ['find','flag','send','up','delete','strong_click',"wait_until"]
+exts = ['find','flag','send','up','delete','strong_click',"wait_until","clickable"]
 
 for ext in exts:
     exec('WebDriver.'+ext+' = '+ext)

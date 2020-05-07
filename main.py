@@ -4,7 +4,11 @@ from selenium.webdriver.common.keys import Keys
 import extensions,local
 import os,sys,json,string,time,signal
 
+implicit_wait = 3
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
+output_path = "%s/%s/" % (dir_path,local.output_folder)
+temp_path = "%s/temp/" % (dir_path)
 
 settings = {
     "appState": {
@@ -13,32 +17,40 @@ settings = {
             "origin": "local"
         }],
         "selectedDestinationId": "Save as PDF",
-        "version": 2
+        "version": 2,
+        "isHeaderFooterEnabled": False
     }  
 }
-prefs = {'printing.print_preview_sticky_settings': json.dumps(settings)}
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_experimental_option('prefs', prefs)
-chrome_options.add_argument('--kiosk-printing')
+prefs = {
+	'printing.print_preview_sticky_settings': json.dumps(settings),
+	'savefile.default_directory': temp_path,
+	#'C:%s' % (temp_path),
+	'download.directory_upgrade': True
+}
+options = webdriver.ChromeOptions()
+options.add_experimental_option('prefs', prefs)
+options.add_argument('--kiosk-printing')
 
-driver = webdriver.Chrome(options=chrome_options)
+driver = webdriver.Chrome(options=options)
 action = ActionChains(driver)
-driver.implicitly_wait(3)
+driver.implicitly_wait(implicit_wait)
 
 extensions.set_driver(driver,action)
 
 def signal_handler(sig, frame):
-    error("Manual Exit",False)
+    error("Manual Exit",False,False)
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def error(e="Unkown",line=True):
+def error(e="Unkown",line=True,pause=True):
 	if line:
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print("Error: %s (%s %s)" % (e,fname,exc_tb.tb_lineno))
 	else:
 		print("Error: %s" % (e))
+	if pause:
+		input(" -- Quit -- ")
 	driver.quit()
 	quit()
 
@@ -59,7 +71,7 @@ def path_ready(text,slash=False):
 				break	
 		else:
 			fixed += "_"
-	if slash
+	if slash:
 		fixed +="/"
 	return fixed
 
@@ -95,10 +107,12 @@ def login():
 
 def save_pdfs():
 	try:
-		output_path = "%s/%s/" % (dir_path,local.output_folder)
-		
 		# Clear output folder
-		os.system("rm -rfv %s/*" % (output_path))
+		os.system("rm -r %s/*" % (output_path))
+
+		if "temp" in os.listdir(dir_path):
+			os.system("rm -r %s/*" % (temp_path))
+		os.system("mkdir %s" % (temp_path))
 
 		for assignment in assignments:
 
@@ -106,7 +120,6 @@ def save_pdfs():
 			driver.get(assignment.url)
 			assignment.course_name = driver.find("class","assignmentDetails__Info").find("tag","a").wait_until("element.text != ''").text
 			assignment.name = driver.find("class","assignmentDetails__Title").wait_until("element.text != ''").text
-			print(driver.find("id","x_of_x_students_frd").text)
 			assignment.student_count = int(driver.find("id","x_of_x_students_frd").text.split("/")[1])
 
 			# Create file structure
@@ -120,11 +133,31 @@ def save_pdfs():
 			# Save each student pdf
 			for i in range(assignment.student_count):
 				student_name = driver.find("id","students_selectmenu-button").find("class","ui-selectmenu-item-header").text
-				driver.find("class","c-grading",wait=5).click()
+				
+				driver.implicitly_wait(0.5)
+
+				if len(driver.find("id","speedgrader_iframe",True)) > 0:
+					driver.switch_to.frame(driver.find("id","speedgrader_iframe",wait=5))
+					new_path = assignment.path+path_ready(student_name)+'.pdf'
+					driver.find("class","c-grading",wait=5).wait_until("element.clickable()").click()
+				else:
+					new_path = assignment.path+path_ready(student_name)+' (Not Submitted).pdf'
+
+				driver.implicitly_wait(implicit_wait)
+
+				driver.execute_script('document.getElementsByTagName("head")[0].insertAdjacentHTML("afterbegin",\'<style type="text/css" media="print"> @page {margin: 0;} </style>\')')
 				time.sleep(0.1)
 				driver.execute_script("print()")
-				driver.send_keys(Keys.ENTER)
-				input("student_name")
+				time.sleep(0.1)
+
+				old_path = temp_path+os.listdir(temp_path)[0]
+
+				os.system('mv "%s" "%s" ' % (old_path,new_path))
+				
+				driver.switch_to.default_content()
+				driver.find("id","next-student-button").click()
+
+		os.system("rm -r %s" % (temp_path))
 
 	except Exception as e:
 		error(e)
