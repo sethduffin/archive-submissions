@@ -23,7 +23,7 @@
 Note: On the first launch it will ask you to verify chromedriver. To do this, go to System Preferences > Security & Privacy > General > chomedriver: Allow anyways
 
 ## Archiving Submissions
-Paste assignment links in "assignments.txt"
+Paste assignment links in "assignments.txt"<br/>
 Execute the "run" file to archive student submissons!
 
 	./run 
