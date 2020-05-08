@@ -12,18 +12,16 @@ code_dir = "%s/code/" % (dir_path)
 temp_path = "%s/code/temp/" % (dir_path)
 
 settings = {
-    "appState": {
-        "recentDestinations": [{
-            "id": "Save as PDF",
-            "origin": "local"
-        }],
-        "selectedDestinationId": "Save as PDF",
-        "version": 2,
-        "isHeaderFooterEnabled": False
-    }  
+   "recentDestinations": [{
+        "id": "Save as PDF",
+        "origin": "local",
+        "account": "",
+    }],
+    "selectedDestinationId": "Save as PDF",
+    "version": 2
 }
 prefs = {
-	'printing.print_preview_sticky_settings': json.dumps(settings),
+	'printing.print_preview_sticky_settings.appState': json.dumps(settings),
 	'savefile.default_directory': temp_path,
 	'download.prompt_for_download': False,
     'download.directory_upgrade': True,
