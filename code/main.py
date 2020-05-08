@@ -287,7 +287,6 @@ def save_pdfs():
 							os.system('mv "%s" "%s" ' % (old_path,new_path))
 							global successfull_archives
 							successfull_archives += 1
-							error("Done")
 						except Exception as e:
 							#error(e,True)
 							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s)" % (i+1,assignment.source))
