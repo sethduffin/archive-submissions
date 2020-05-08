@@ -22,11 +22,9 @@
 
 Note: On the first launch it will ask you to verify chromedriver. To do this, go to System Preferences > Security & Privacy > General > chomedriver: Allow anyways
 
-## Setup
-1. Paste assignment links in "assignments.txt"
-
-## Run
-Execute the file to to archive student submissons!
+## Archiving Submissions
+Paste assignment links in "assignments.txt"
+Execute the "run" file to archive student submissons!
 
 	./run 
 The first time you execute the script, it will have you enter your Canvas credentials
