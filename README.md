@@ -23,11 +23,10 @@
 Note: On the first launch it will ask you to verify chromedriver. To do this, go to System Preferences > Security & Privacy > General > chomedriver: Allow anyways
 
 ## Setup
-1. Set Canvas username and password in local.py 
-2. Put assignment links in "assignments.txt"
+1. Paste assignment links in "assignments.txt"
 
 ## Run
 Execute the file to to archive student submissons!
 
 	./run 
-Archive location: "submissons" folder
+The first time you execute the script, it will have you enter your Canvas credentials

@@ -5,7 +5,7 @@ import extensions
 import os,sys,json,string,time,signal
 from getpass import getpass
 
-implicit_wait = 3
+iw = 3 # Default implicit wait
 
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 code_dir = "%s/code/" % (dir_path)
@@ -78,7 +78,7 @@ def start_driver():
 	global driver,action
 	driver = webdriver.Chrome(options=options)
 	action = ActionChains(driver)
-	driver.implicitly_wait(implicit_wait)
+	driver.implicitly_wait(iw)
 
 	extensions.set_driver(driver,action)
 
@@ -131,9 +131,10 @@ def check():
 		if len(lines) == 0:
 			error('No assignment urls provided in "assignment.txt"',False)
 	if not local.username or not local.password:
-		print("No canvas username or password set")
+		print("\033[4m"+"Set Canvas Credentials"+"\033[0m")
 		local.username = input("Username: ")
 		local.password = getpass("Password: ")
+		os.system('clear')
 		new_credentials = True
 	if not local.username or not local.password:
 		error("Invalid credentials")
@@ -152,14 +153,27 @@ def import_urls():
 
 def login():
 	driver.get(assignments[0].url)
-	driver.find("name","pseudonym_session[unique_id]").send(local.username)
-	driver.find("name","pseudonym_session[password]").send(local.password)
-	driver.find("class","Button--login")[0].send_keys(Keys.RETURN)
+	driver.implicitly_wait(0.5)
+	if len(driver.find("name","pseudonym_session[unique_id]",True)) > 0:
+		driver.find("name","pseudonym_session[unique_id]").send(local.username)
+		driver.find("name","pseudonym_session[password]").send(local.password)
+		driver.find("class","Button--login")[0].send_keys(Keys.RETURN)
+	elif len(driver.find("name","UserName",True)) > 0:
+		driver.find("name","UserName").send_keys(local.username)
+		driver.find("name","Password").send_keys(local.password)
+		time.sleep(0.3)
+		driver.find("id","submitButton").click()
+	else:
+		error("Unrecognized Canvas, unable to login")
 
-	if len(driver.find("text+","Invalid username or password",True)) > 0:
-		error("Unable to login with Canvas credentials")
+	if len(driver.find("text+","Invalid username or password",True)) > 0 or len(driver.find("id","errorText",True)) > 0:
+		local.username = ""
+		local.password = ""
+		save_credentials()
+		error("Unable to login with current Canvas credentials. \nRun script again to set new credentials.")
 	elif new_credentials:
 		save_credentials()
+	driver.implicitly_wait(iw)
 
 def save_pdfs():
 	try:
@@ -208,7 +222,7 @@ def save_pdfs():
 							else:
 								new_path = assignment.path+path_ready(student_name)+' (No Submission).pdf'
 
-							driver.implicitly_wait(implicit_wait)
+							driver.implicitly_wait(iw)
 
 							driver.execute_script('document.getElementsByTagName("head")[0].insertAdjacentHTML("afterbegin",\'<style type="text/css" media="print"> @page {margin: 0;} </style>\')')
 							time.sleep(0.1)
