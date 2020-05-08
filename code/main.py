@@ -1,15 +1,32 @@
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-import extensions,local
+import extensions
 import os,sys,json,string,time,signal
+from getpass import getpass
 
 implicit_wait = 3
 
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-output_path = "%s/%s/" % (dir_path,local.output_folder)
 code_dir = "%s/code/" % (dir_path)
 temp_path = "%s/code/temp/" % (dir_path)
+local_path = code_dir+'local.py'
+
+local_template = '''username = ""					# Canvas username that has access to all assginment links
+password = ""					# Canvas password to username
+output_folder = "submissions"	# Folder name to save archived submissons to
+clear_output_folder = True 		# Removes all files in output folder when script is executed 
+'''
+
+
+# Make sure local file is created
+if not 'local.py' in os.listdir(code_dir):
+	with open(local_path, "w") as file:
+		file.writelines(local_template)
+
+import local
+
+output_path = "%s/%s/" % (dir_path,local.output_folder)
 
 settings = {
    "recentDestinations": [{
@@ -34,34 +51,44 @@ options = webdriver.ChromeOptions()
 options.add_experimental_option('prefs', prefs)
 options.add_argument('--kiosk-printing')
 
-driver = webdriver.Chrome(options=options)
-action = ActionChains(driver)
-driver.implicitly_wait(implicit_wait)
-
-extensions.set_driver(driver,action)
+driver = None
+action = None
 
 def signal_handler(sig, frame):
-    error("Manual Exit",False)
+    print("")
+    print("Manual Exit")
+    if driver:
+    	driver.quit()
+    sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def error(e="Unkown",line=True,pause=True):
+def error(e="Unkown",line=False):
 	if line:
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print("%s (%s %s)" % (e,fname,exc_tb.tb_lineno))
 	else:
 		print(e)
-	driver.quit()
-	quit()
+	if driver:
+		driver.quit()
+	sys.exit(0)
+
+def start_driver():
+	global driver,action
+	driver = webdriver.Chrome(options=options)
+	action = ActionChains(driver)
+	driver.implicitly_wait(implicit_wait)
+
+	extensions.set_driver(driver,action)
 
 # Remove path unsported characters
 def path_ready(text,slash=False):
 	allowed = [
 		string.ascii_lowercase,
 		string.ascii_uppercase,
-		range(10),
-		[" ","-","_"]
+		['0','1','2','3','4','5','6','7','8','9'],
+		[' ','-','_']
 	]
 	fixed = ""
 	for char in text:
@@ -78,6 +105,8 @@ def path_ready(text,slash=False):
 
 courses = []
 assignments = []
+new_credentials = False
+successfull_archives = 0
 
 class Assignment:
 	def __init__(self,url,assignment_id,source):
@@ -85,12 +114,34 @@ class Assignment:
 		self.assignment_id = assignment_id
 		self.source = source
 
+def save_credentials():
+	local_file = None
+	with open(local_path, "r") as file:
+		local_file = file.readlines()
+	local_file[0] = ('username = "%s"			# Canvas username that has access to all assginment links\n' % (local.username))
+	local_file[1] = ('password = "%s"			# Canvas password to username\n' % (local.password))
+	with open(local_path, "w") as file:
+		file.truncate()
+		file.writelines(local_file)
+
+def check():
+	global new_credentials
+	with open("assignments.txt","r") as file:
+		lines = file.read().splitlines()
+		if len(lines) == 0:
+			error('No assignment urls provided in "assignment.txt"',False)
+	if not local.username or not local.password:
+		print("No canvas username or password set")
+		local.username = input("Username: ")
+		local.password = getpass("Password: ")
+		new_credentials = True
+	if not local.username or not local.password:
+		error("Invalid credentials")
+	
 def import_urls():
 	try:
 		with open("assignments.txt","r") as file:
 			lines = file.read().splitlines()
-			if len(lines) == 0:
-				error("No assignment urls provided",False)
 			for i,line in enumerate(lines):
 				assignment_id = line.split("assignments/")[1]
 				source = "Line %s: %s" % (i+1,line)
@@ -100,15 +151,15 @@ def import_urls():
 		error(e)
 
 def login():
-	try:
-		if not local.username:
-			error("No username or password set in local.py", False)
-		driver.get(assignments[0].url)
-		driver.find("name","pseudonym_session[unique_id]").send(local.username)
-		driver.find("name","pseudonym_session[password]").send(local.password)
-		driver.find("class","Button--login")[0].send_keys(Keys.RETURN)
-	except Exception as e:
-		error(e)
+	driver.get(assignments[0].url)
+	driver.find("name","pseudonym_session[unique_id]").send(local.username)
+	driver.find("name","pseudonym_session[password]").send(local.password)
+	driver.find("class","Button--login")[0].send_keys(Keys.RETURN)
+
+	if len(driver.find("text+","Invalid username or password",True)) > 0:
+		error("Unable to login with Canvas credentials")
+	elif new_credentials:
+		save_credentials()
 
 def save_pdfs():
 	try:
@@ -167,7 +218,10 @@ def save_pdfs():
 							old_path = temp_path+os.listdir(temp_path)[0]
 
 							os.system('mv "%s" "%s" ' % (old_path,new_path))
-						except:
+							global successfull_archives
+							successfull_archives += 1
+						except Exception as e:
+							# error(e)
 							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s)" % (i+1,assignment.source))
 
 						driver.switch_to.default_content()
@@ -183,10 +237,17 @@ def save_pdfs():
 	except Exception as e:
 		error(e)
 
+def done():
+	if successfull_archives > 0:
+		print("Successfully archived %s student submissions!" % (successfull_archives))
+
 def run():
+	check()
+	start_driver()
 	import_urls()
 	login()
 	save_pdfs()
+	done()
 	
 try:
 	run()
