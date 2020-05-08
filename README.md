@@ -1,5 +1,8 @@
 # Archive Canvas Student Submissons
 
+## Overview
+This small script uses Canvas assignment links to save student submissions as PDF's while keeping them organized in a Canvas like folder structure! This project requires Python 3 and Selenium to gather submissions, make sure both are correctly installed beforehand using the steps below.
+
 ## Installing Selenium
 1. Install Chrome Driver:
 	1. Go to: https://sites.google.com/a/chromium.org/chromedriver/home
