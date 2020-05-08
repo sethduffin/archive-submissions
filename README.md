@@ -20,7 +20,7 @@
 	pip3 install selenium
 	```
 
-Note: On the first lauch it will ask you to verify chromedriver. To do this, go to System Preferences > Security & Privacy > General > chomedriver: Allow anyways
+Note: On the first launch it will ask you to verify chromedriver. To do this, go to System Preferences > Security & Privacy > General > chomedriver: Allow anyways
 
 ## Setup
 1. Set Canvas username and password in local.py 
