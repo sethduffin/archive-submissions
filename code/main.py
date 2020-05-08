@@ -18,6 +18,59 @@ output_folder = "submissions"	# Folder name to save archived submissons to
 clear_output_folder = True 		# Removes all files in output folder when script is executed 
 '''
 
+print_style = '''
+<style type="text/css" media="print"> 
+	@page {
+		margin: 10px;
+	} 
+	@media print {
+		.speedgrader-stats {
+		    display: flex;
+		    flex-direction: column;
+		    align-items: center;
+		    justify-content: center;
+		    padding: 1.6rem;
+		    background-color: #f5f5f5 !important;
+		    border: #d6d6d6;
+		    border-style: solid;
+		    border-width: 1px;
+		    border-radius: .3rem;
+		    margin-bottom: 1rem;
+		    text-align: center;
+		    height: 60px;
+		}
+		.speedgrader-stats span {
+		    margin-bottom: .4rem;
+		    font-size: 10px;
+		    color: #595959;
+		}
+		.speedgrader-stats div {
+		    font-size: 15px;
+		    color: #333;
+		}
+		.u-fifth {
+		    width: 20%!important;
+		}
+		.c-row {
+		    display: flex;
+		    align-items: center;
+		}
+		.c-label, .c-text {
+		    font-family: Lato,sans-serif;
+		    font-weight: 400;
+		    color: #333;
+		    margin-top: 40px;
+		}
+		.c-column {
+    		padding: .1rem 1rem .1rem 1rem;
+		}
+		.speedgrader-actions {
+		    display: none;
+		}
+	} 
+</style>
+'''.replace('\n', ' ').replace('\r', '')
+
 
 # Make sure local file is created
 if not 'local.py' in os.listdir(code_dir):
@@ -224,7 +277,7 @@ def save_pdfs():
 
 							driver.implicitly_wait(iw)
 
-							driver.execute_script('document.getElementsByTagName("head")[0].insertAdjacentHTML("afterbegin",\'<style type="text/css" media="print"> @page {margin: 0;} </style>\')')
+							driver.execute_script('document.getElementsByTagName("head")[0].insertAdjacentHTML("afterbegin",\'%s\')' % (print_style))
 							time.sleep(0.1)
 							driver.execute_script("print()")
 							time.sleep(0.1)
@@ -234,8 +287,9 @@ def save_pdfs():
 							os.system('mv "%s" "%s" ' % (old_path,new_path))
 							global successfull_archives
 							successfull_archives += 1
+							error("Done")
 						except Exception as e:
-							# error(e)
+							#error(e,True)
 							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s)" % (i+1,assignment.source))
 
 						driver.switch_to.default_content()
