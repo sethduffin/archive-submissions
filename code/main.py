@@ -13,6 +13,8 @@ code_dir = "%s/code/" % (dir_path)
 temp_path = "%s/code/temp/" % (dir_path)
 config_path = code_dir+'config.json'
 
+manual_exit = False
+
 config_template = {
 	"username":"",
 	"password":"",
@@ -38,7 +40,7 @@ def save_config():
 settings = {
    "recentDestinations": [{
         "id": "Save as PDF",
-        "origin": "config",
+        "origin": "local",
         "account": "",
     }],
     "selectedDestinationId": "Save as PDF",
@@ -47,10 +49,8 @@ settings = {
 prefs = {
 	'printing.print_preview_sticky_settings.appState': json.dumps(settings),
 	'savefile.default_directory': temp_path,
-	'download.prompt_for_download': False,
-    'download.directory_upgrade': True,
     "printing.default_destination_selection_rules": {
-        "kind": "config",
+        "kind": "local",
         "namePattern": "Save as PDF",
     },
 }
@@ -62,6 +62,9 @@ driver = None
 action = None
 
 def signal_handler(sig, frame):
+    global manual_exit
+    manual_exit = True
+
     print("")
     print("Manual Exit")
     if driver:
@@ -71,14 +74,15 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def error(e="Unkown",line=False):
-	if line:
-		exc_type, exc_obj, exc_tb = sys.exc_info()
-		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-		print("%s (%s %s)" % (e,fname,exc_tb.tb_lineno))
-	else:
-		print(e)
-	if driver:
-		driver.quit()
+	if not manual_exit:
+		if line:
+			exc_type, exc_obj, exc_tb = sys.exc_info()
+			fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+			print("%s (%s %s)" % (e,fname,exc_tb.tb_lineno))
+		else:
+			print(e)
+		if driver:
+			driver.quit()
 	sys.exit(0)
 
 def start_driver():
@@ -250,6 +254,8 @@ def save_pdfs():
 		error(e)
 
 def done():
+	if manual_exit:
+		os.system('clear')
 	if successfull_archives > 0:
 		print("Successfully archived %s student submissions!" % (successfull_archives))
 
