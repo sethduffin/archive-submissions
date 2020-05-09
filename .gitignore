@@ -1,4 +1,4 @@
 submissions/*
 **/.DS_Store
 __pycache__
-code/local.py
+code/config.json

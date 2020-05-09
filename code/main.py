@@ -8,83 +8,37 @@ from getpass import getpass
 iw = 3 # Default implicit wait
 
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+output_path = "%s/submissions/" % (dir_path)
 code_dir = "%s/code/" % (dir_path)
 temp_path = "%s/code/temp/" % (dir_path)
-local_path = code_dir+'local.py'
+config_path = code_dir+'config.json'
 
-local_template = '''username = ""					# Canvas username that has access to all assginment links
-password = ""					# Canvas password to username
-output_folder = "submissions"	# Folder name to save archived submissons to
-clear_output_folder = True 		# Removes all files in output folder when script is executed 
-'''
+config_template = {
+	"username":"",
+	"password":"",
+	"allowed_special_characters":"",
+	"clear_output_folder":True,
+}
 
-print_style = '''
-<style type="text/css" media="print"> 
-	@page {
-		margin: 10px;
-	} 
-	@media print {
-		.speedgrader-stats {
-		    display: flex;
-		    flex-direction: column;
-		    align-items: center;
-		    justify-content: center;
-		    padding: 1.6rem;
-		    background-color: #f5f5f5 !important;
-		    border: #d6d6d6;
-		    border-style: solid;
-		    border-width: 1px;
-		    border-radius: .3rem;
-		    margin-bottom: 1rem;
-		    text-align: center;
-		    height: 60px;
-		}
-		.speedgrader-stats span {
-		    margin-bottom: .4rem;
-		    font-size: 10px;
-		    color: #595959;
-		}
-		.speedgrader-stats div {
-		    font-size: 15px;
-		    color: #333;
-		}
-		.u-fifth {
-		    width: 20%!important;
-		}
-		.c-row {
-		    display: flex;
-		    align-items: center;
-		}
-		.c-label, .c-text {
-		    font-family: Lato,sans-serif;
-		    font-weight: 400;
-		    color: #333;
-		    margin-top: 40px;
-		}
-		.c-column {
-    		padding: .1rem 1rem .1rem 1rem;
-		}
-		.speedgrader-actions {
-		    display: none;
-		}
-	} 
-</style>
-'''.replace('\n', ' ').replace('\r', '')
+config = {}
 
+# Make sure config file is created
+if not 'config.json' in os.listdir(code_dir):
+	with open(config_path, "w") as file:
+		file.write(json.dumps(config_template,indent=4))
 
-# Make sure local file is created
-if not 'local.py' in os.listdir(code_dir):
-	with open(local_path, "w") as file:
-		file.writelines(local_template)
+# Load config
+with open(config_path, "r") as file:
+	config = json.loads(file.read())
 
-import local
-
-output_path = "%s/%s/" % (dir_path,local.output_folder)
+def save_config():
+	with open(config_path, "w") as file:
+		file.write(json.dumps(config,indent=4))
 
 settings = {
    "recentDestinations": [{
         "id": "Save as PDF",
-        "origin": "local",
+        "origin": "config",
         "account": "",
     }],
     "selectedDestinationId": "Save as PDF",
@@ -96,7 +50,7 @@ prefs = {
 	'download.prompt_for_download': False,
     'download.directory_upgrade': True,
     "printing.default_destination_selection_rules": {
-        "kind": "local",
+        "kind": "config",
         "namePattern": "Save as PDF",
     },
 }
@@ -141,7 +95,8 @@ def path_ready(text,slash=False):
 		string.ascii_lowercase,
 		string.ascii_uppercase,
 		['0','1','2','3','4','5','6','7','8','9'],
-		[' ','-','_']
+		[' ','-','_','.','\'','|'],
+		config["allowed_special_characters"],
 	]
 	fixed = ""
 	for char in text:
@@ -167,29 +122,19 @@ class Assignment:
 		self.assignment_id = assignment_id
 		self.source = source
 
-def save_credentials():
-	local_file = None
-	with open(local_path, "r") as file:
-		local_file = file.readlines()
-	local_file[0] = ('username = "%s"			# Canvas username that has access to all assginment links\n' % (local.username))
-	local_file[1] = ('password = "%s"			# Canvas password to username\n' % (local.password))
-	with open(local_path, "w") as file:
-		file.truncate()
-		file.writelines(local_file)
-
 def check():
 	global new_credentials
 	with open("assignments.txt","r") as file:
 		lines = file.read().splitlines()
 		if len(lines) == 0:
 			error('No assignment urls provided in "assignment.txt"',False)
-	if not local.username or not local.password:
+	if not config["username"] or not config["password"]:
 		print("\033[4m"+"Set Canvas Credentials"+"\033[0m")
-		local.username = input("Username: ")
-		local.password = getpass("Password: ")
+		config["username"] = input("Username: ")
+		config["password"] = getpass("Password: ")
 		os.system('clear')
 		new_credentials = True
-	if not local.username or not local.password:
+	if not config["username"] or not config["password"]:
 		error("Invalid credentials")
 	
 def import_urls():
@@ -208,30 +153,30 @@ def login():
 	driver.get(assignments[0].url)
 	driver.implicitly_wait(0.5)
 	if len(driver.find("name","pseudonym_session[unique_id]",True)) > 0:
-		driver.find("name","pseudonym_session[unique_id]").send(local.username)
-		driver.find("name","pseudonym_session[password]").send(local.password)
+		driver.find("name","pseudonym_session[unique_id]").send(config["username"])
+		driver.find("name","pseudonym_session[password]").send(config["password"])
 		driver.find("class","Button--login")[0].send_keys(Keys.RETURN)
 	elif len(driver.find("name","UserName",True)) > 0:
-		driver.find("name","UserName").send_keys(local.username)
-		driver.find("name","Password").send_keys(local.password)
+		driver.find("name","UserName").send_keys(config["username"])
+		driver.find("name","Password").send_keys(config["password"])
 		time.sleep(0.3)
 		driver.find("id","submitButton").click()
 	else:
 		error("Unrecognized Canvas, unable to login")
 
 	if len(driver.find("text+","Invalid username or password",True)) > 0 or len(driver.find("id","errorText",True)) > 0:
-		local.username = ""
-		local.password = ""
-		save_credentials()
+		config["username"] = ""
+		config["password"] = ""
+		save_config()
 		error("Unable to login with current Canvas credentials. \nRun script again to set new credentials.")
 	elif new_credentials:
-		save_credentials()
+		save_config()
 	driver.implicitly_wait(iw)
 
 def save_pdfs():
 	try:
 		# Clear output folder
-		if local.clear_output_folder:
+		if config["clear_output_folder"]:
 			if "submissions" in os.listdir(dir_path):
 				os.system("rm -r %s" % (output_path))
 			os.system("mkdir %s" % (output_path))
@@ -289,7 +234,7 @@ def save_pdfs():
 							successfull_archives += 1
 						except Exception as e:
 							#error(e,True)
-							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s)" % (i+1,assignment.source))
+							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s" % (i+1,assignment.source))
 
 						driver.switch_to.default_content()
 						driver.find("id","next-student-button").click()
@@ -307,6 +252,59 @@ def save_pdfs():
 def done():
 	if successfull_archives > 0:
 		print("Successfully archived %s student submissions!" % (successfull_archives))
+
+print_style = '''
+<style type="text/css" media="print"> 
+	@page {
+		margin: 10px;
+	} 
+	@media print {
+		.speedgrader-stats {
+		    display: flex;
+		    flex-direction: column;
+		    align-items: center;
+		    justify-content: center;
+		    padding: 1.6rem;
+		    background-color: #f5f5f5 !important;
+		    border: #d6d6d6;
+		    border-style: solid;
+		    border-width: 1px;
+		    border-radius: .3rem;
+		    margin-bottom: 1rem;
+		    text-align: center;
+		    height: 60px;
+		}
+		.speedgrader-stats span {
+		    margin-bottom: .4rem;
+		    font-size: 10px;
+		    color: #595959;
+		}
+		.speedgrader-stats div {
+		    font-size: 15px;
+		    color: #333;
+		}
+		.u-fifth {
+		    width: 20%!important;
+		}
+		.c-row {
+		    display: flex;
+		    align-items: center;
+		}
+		.c-label, .c-text {
+		    font-family: Lato,sans-serif;
+		    font-weight: 400;
+		    color: #333;
+		    margin-top: 40px;
+		}
+		.c-column {
+    		padding: .1rem 1rem .1rem 1rem;
+		}
+		.speedgrader-actions {
+		    display: none;
+		}
+	} 
+</style>
+'''.replace('\n', ' ').replace('\r', '')
 
 def run():
 	check()
