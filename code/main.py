@@ -220,7 +220,7 @@ def save_pdfs():
 							if len(driver.find("id","speedgrader_iframe",True)) > 0:
 								driver.switch_to.frame(driver.find("id","speedgrader_iframe",wait=5))
 								new_path = assignment.path+path_ready(student_name)+'.pdf'
-								driver.find("class","c-grading",wait=8).wait_until("element.clickable()",8).click()
+								driver.find("class","aj-grading",wait=8).wait_until("element.clickable()",8).click()
 							else:
 								new_path = assignment.path+path_ready(student_name)+' (No Submission).pdf'
 
@@ -237,7 +237,7 @@ def save_pdfs():
 							global successfull_archives
 							successfull_archives += 1
 						except Exception as e:
-							#error(e,True)
+							# error(e,True) # <<<========== Uncomment to Debug ==========
 							print("[Error] Unable to archive student (%s) submission for assignment: \n        %s" % (i+1,assignment.source))
 
 						driver.switch_to.default_content()
@@ -292,20 +292,20 @@ print_style = '''
 		.u-fifth {
 		    width: 20%!important;
 		}
-		.c-row {
+		.aj-row {
 		    display: flex;
 		    align-items: center;
 		}
-		.c-label, .c-text {
+		.aj-label, .aj-text {
 		    font-family: Lato,sans-serif;
 		    font-weight: 400;
 		    color: #333;
 		    margin-top: 40px;
 		}
-		.c-column {
+		.aj-column {
     		padding: .1rem 1rem .1rem 1rem;
 		}
-		.speedgrader-actions {
+		.aj-speedgrader-actions {
 		    display: none;
 		}
 	} 
