@@ -126,7 +126,7 @@ class Assignment:
 		self.assignment_id = assignment_id
 		self.source = source
 
-def check():
+def check_credentials():
 	global new_credentials
 	with open("assignments.txt","r") as file:
 		lines = file.read().splitlines()
@@ -214,15 +214,18 @@ def save_pdfs():
 					for i in range(assignment.student_count):
 						try:
 							student_name = driver.find("id","students_selectmenu-button").find("class","ui-selectmenu-item-header").text
-							
+							student_id = driver.current_url.split("student_id=")[1]
+
 							driver.implicitly_wait(0.5)
+
+							new_path = assignment.path+path_ready(student_name)+' - '+student_id
 
 							if len(driver.find("id","speedgrader_iframe",True)) > 0:
 								driver.switch_to.frame(driver.find("id","speedgrader_iframe",wait=5))
-								new_path = assignment.path+path_ready(student_name)+'.pdf'
 								driver.find("class","aj-grading",wait=8).wait_until("element.clickable()",8).click()
+								new_path += '.pdf'
 							else:
-								new_path = assignment.path+path_ready(student_name)+' (No Submission).pdf'
+								new_path += ' (NS).pdf'
 
 							driver.implicitly_wait(iw)
 
@@ -313,13 +316,14 @@ print_style = '''
 '''.replace('\n', ' ').replace('\r', '')
 
 def run():
-	check()
-	start_driver()
+	check_credentials()
 	import_urls()
+	
+	start_driver()
 	login()
 	save_pdfs()
+
 	done()
-	
 try:
 	run()
 except Exception as e:
