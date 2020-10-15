@@ -7,8 +7,8 @@ from getpass import getpass
 
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 output_path = "%s/submissions/" % (dir_path)
-code_dir = "%s/code/" % (dir_path)
-temp_path = "%s/code/temp/" % (dir_path)
+code_dir = "%s/src/" % (dir_path)
+temp_path = "%s/src/temp/" % (dir_path)
 config_path = code_dir+'config.json'
 
 manual_exit = False
