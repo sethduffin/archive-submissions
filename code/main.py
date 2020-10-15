@@ -5,8 +5,6 @@ import extensions
 import os,sys,json,string,time,signal
 from getpass import getpass
 
-iw = 3 # Default implicit wait
-
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 output_path = "%s/submissions/" % (dir_path)
 code_dir = "%s/code/" % (dir_path)
@@ -29,13 +27,21 @@ if not 'config.json' in os.listdir(code_dir):
 	with open(config_path, "w") as file:
 		file.write(json.dumps(config_template,indent=4))
 
+def save_config():
+	with open(config_path, "w") as file:
+		file.write(json.dumps(config,indent=4))
+
 # Load config
 with open(config_path, "r") as file:
 	config = json.loads(file.read())
 
-def save_config():
-	with open(config_path, "w") as file:
-		file.write(json.dumps(config,indent=4))
+# Make sure wait_time is set
+if not 'max_wait_time' in config:
+	config['max_wait_time'] = 20
+	save_config()
+
+max_wait_time = config['max_wait_time'] # Speedgrader timeout in seconds
+iw = 3 # Default implicit wait
 
 settings = {
    "recentDestinations": [{
@@ -54,6 +60,7 @@ prefs = {
         "namePattern": "Save as PDF",
     },
 }
+
 options = webdriver.ChromeOptions()
 options.add_experimental_option('prefs', prefs)
 options.add_argument('--kiosk-printing')
@@ -132,12 +139,14 @@ def check_credentials():
 		lines = file.read().splitlines()
 		if len(lines) == 0:
 			error('No assignment urls provided in "assignment.txt"',False)
+
 	if not config["username"] or not config["password"]:
 		print("\033[4m"+"Set Canvas Credentials"+"\033[0m")
 		config["username"] = input("Username: ")
 		config["password"] = getpass("Password: ")
 		os.system('clear')
 		new_credentials = True
+
 	if not config["username"] or not config["password"]:
 		error("Invalid credentials")
 	
@@ -198,8 +207,8 @@ def save_pdfs():
 
 				try:
 
-					assignment.course_name = driver.find("class","assignmentDetails__Info").find("tag","a").wait_until("element.text != ''").text
-					assignment.name = driver.find("class","assignmentDetails__Title").wait_until("element.text != ''").text
+					assignment.course_name = driver.find("class","assignmentDetails__Info").find("tag","a").wait_until("element.text != ''",max_wait_time).text
+					assignment.name = driver.find("class","assignmentDetails__Title").wait_until("element.text != ''",max_wait_time).text
 					assignment.student_count = int(driver.find("id","x_of_x_students_frd").text.split("/")[1])
 
 					# Create file structure
@@ -221,8 +230,8 @@ def save_pdfs():
 							new_path = assignment.path+path_ready(student_name)+' - '+student_id
 
 							if len(driver.find("id","speedgrader_iframe",True)) > 0:
-								driver.switch_to.frame(driver.find("id","speedgrader_iframe",wait=5))
-								driver.find("class","aj-grading",wait=8).wait_until("element.clickable()",8).click()
+								driver.switch_to.frame(driver.find("id","speedgrader_iframe",wait=max_wait_time))
+								driver.find("class","aj-grading",wait=max_wait_time).wait_until("element.clickable()",max_wait_time).click()
 								new_path += '.pdf'
 							else:
 								new_path += ' (NS).pdf'
@@ -260,6 +269,7 @@ def done():
 	if manual_exit:
 		os.system('clear')
 	if successfull_archives > 0:
+		save_config()
 		print("Successfully archived %s student submissions!" % (successfull_archives))
 
 print_style = '''
